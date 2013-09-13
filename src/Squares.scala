@@ -43,14 +43,15 @@ case class Result(startOfSeq: Int) extends SquaresMsg
 
 case class ResultsSet(seqsSet: TreeSet[Int]) extends SquaresMsg
 
-//case class ResultsSet(seqsSet: TreeSet[Int]) extends SquaresMsg
-
 class Worker extends Actor {
 
   def verifySeq(startOfSeq: Int, nElements: Int): Int = {
     var sumOfSquares = 0.0
-    for (i ← startOfSeq until (startOfSeq + nElements))
-      sumOfSquares += i * i
+    for (i ← startOfSeq until (startOfSeq + nElements)) {
+      // calculate square using Long to avoid potential Int overflow problems
+      // e.g. 1000000 24 should output 30 sequences instead of 36 using Int
+      sumOfSquares += i.toLong * i.toLong
+    }
     val sqrtOfSum = sqrt(sumOfSquares)
     if (sqrtOfSum == ceil(sqrtOfSum))
       startOfSeq
