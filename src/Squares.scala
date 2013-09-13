@@ -24,7 +24,7 @@ object Squares extends App {
     val listener = system.actorOf(Props[Listener], name = "listener")
 
     // create the master
-    val master = system.actorOf(Props(classOf[Master], nWorkers, nElements, nMsgs, listener), name = "master")
+    val master = system.actorOf(Props(new Master(nWorkers, nElements, nMsgs, listener)), name = "master")
 
     // startOfSeq the calculation
     master ! Assign
