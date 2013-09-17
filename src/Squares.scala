@@ -6,24 +6,40 @@
  */
 
 import akka.actor.{Actor, ActorSystem, Props, ActorRef}
+import akka.routing.RoundRobinRouter
 import scala.math.sqrt
+
+import akka.kernel.Bootable
+import com.typesafe.config.ConfigFactory
 
 object Squares extends App {
 
   if (args.length == 2) {
-    findSeqs(nWorkers = 4, nElements = args(1).toInt, nMsgs = args(0).toInt)
+    val creator = new CreationApplication(nWorkers = 4, nElements = args(1).toInt, nMsgs = args(0).toInt)
+    creator.findSeqs
+    println("Master Started Assigning Tasks to Remote Computers")
   }
 
-  def findSeqs(nWorkers: Int, nElements: Int, nMsgs: Int) {
-    // Create an Akka system
-    val system = ActorSystem("SquaresSystem")
 
-    // create the master
-    val master = system.actorOf(Props(new Master(nWorkers, nElements, nMsgs)), name = "master")
+}
 
-    // start the calculation
+class CreationApplication(nWorkers: Int, nElements: Int, nMsgs: Int) extends Bootable {
+
+  val system = ActorSystem("RemoteCreation", ConfigFactory.load.getConfig("remotecreation"))
+  // remoteActor
+  val worker = system.actorOf(Props[Worker], name = "worker")
+  // localActor
+  val master = system.actorOf(Props(new Master(nWorkers, nElements, nMsgs, worker)), name = "master")
+
+  def findSeqs() {
     master ! Assign
+  }
 
+  def startup() {
+  }
+
+  def shutdown() {
+    system.shutdown()
   }
 }
 
@@ -41,9 +57,6 @@ class Worker extends Actor {
   def receive = {
     case Work(startOfLoad, workLoad, nElements) ⇒
       for (startOfSeq <- startOfLoad to startOfLoad + workLoad - 1) {
-        // Use sum of squares equation to calculate sum of a sequence's squares
-        // Here use Long to avoid potential Int overflow problems
-        // e.g. 1000000 24 should output 30 sequences instead of 36 using Int
         val start: Long = startOfSeq - 1
         val end: Long = start + nElements
         val sumOfSquares = (end * (end + 1) * (2 * end + 1) - start * (start + 1) * (2 * start + 1)) / 6
@@ -55,20 +68,21 @@ class Worker extends Actor {
   }
 }
 
-class Master(nWorkers: Int, nElements: Int, nMsgs: Int)
-  extends Actor {
+class Master(nWorkers: Int, nElements: Int, nMsgs: Int, worker: ActorRef) extends Actor {
 
-  var workLoad = nMsgs / nWorkers
+//  var workLoad = nMsgs / nWorkers
   var nDone: Int = _
 
-  val workers = new Array[ActorRef](nWorkers)
-  for (i ← 0 to nWorkers - 1)
-    workers(i) = context.actorOf(Props[Worker])
+//  val workers = new Array[ActorRef](nWorkers)
+//  val workerRouter = new RoundRobinRouter()
+//  for (i ← 0 to nWorkers - 1)
+//    workers(i) = context.actorOf(Props[Worker])
 
   def receive = {
     case Assign ⇒
-      for (i ← 0 to nWorkers - 1) workers(i) ! Work(i * workLoad + 1, workLoad, nElements)
-      workers(0) ! Work(nWorkers * workLoad + 1, nMsgs - nWorkers * workLoad, nElements)
+//      for (i ← 0 to nWorkers - 1) workers(i) ! Work(i * workLoad + 1, workLoad, nElements)
+//      workers(0) ! Work(nWorkers * workLoad + 1, nMsgs - nWorkers * workLoad, nElements)
+      worker ! Work(1, nMsgs, nElements)
     case Done ⇒
       nDone += 1
       if (nDone == nMsgs) {
