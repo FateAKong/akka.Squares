@@ -11,5 +11,7 @@ project/boot/
 project/plugins/project/
 
 # IntelliJ-IDE specific
+out/production/
+out/test/
 .idea
 *.iml
