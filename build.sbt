@@ -1,4 +1,4 @@
-name := "dos.Squares"
+name := "akka.Squares"
 
 version := "0.8"
 
